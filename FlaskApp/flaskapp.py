@@ -28,7 +28,7 @@ import cloudinary.uploader
 
 app = Flask(__name__)
 CORS(app)
-CONNECTION_STRING='mongodb+srv://adminuser:useradmin@charitydb.fivwx.mongodb.net/Emotion?retryWrites=true&w=majority'
+CONNECTION_STRING=''
 client = pymongo.MongoClient(CONNECTION_STRING)
 db = client.Emotion
 
@@ -149,8 +149,8 @@ def audioemotion(name):
    pltfig = df.plot(title = 'Last meeting Audio emotion analysis').get_figure()
    pltfig.savefig("audiooutput.png")
    os.remove(location_audiofile)
-   cloudinary.config(cloud_name = 'arkadeep', api_key='814767185331119', 
-   api_secret='Dg6qwXoZT4F6x5G2mhXqksiRdZU')
+   cloudinary.config(cloud_name = '', api_key='', 
+   api_secret='')
    upload_result = cloudinary.uploader.upload('audiooutput.png')
    angry = sum(df['Angry'])
    disgust = sum(df['Disgust'])

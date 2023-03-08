@@ -2,3 +2,4 @@ models
 assets
 face-api.min.js
 .vscode
+ngrok.exe
