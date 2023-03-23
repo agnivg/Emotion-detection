@@ -28,22 +28,26 @@ import cloudinary.uploader
 
 app = Flask(__name__)
 CORS(app)
+# app.config['UPLOAD_FOLDER'] = 'C:/Projects/Emotion-detection-audiovideo/FlaskApp'
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024
 CONNECTION_STRING=''
 client = pymongo.MongoClient(CONNECTION_STRING)
 db = client.Emotion
 
-def videoemotion(name):
-    location_videofile = str(Path.home() / "Downloads/RecordedVideo.mp4")
-    while not os.path.exists(location_videofile):
+def videoemotion(filename,name):
+    # location_videofile = str(Path.home() / "Downloads/RecordedVideo.mp4")
+    while not os.path.exists(filename):
         time.sleep(1)
     # location_videofile = "C:/Users/ADMIN/Downloads/RecordedVideo.mp4"
-    capture = cv2.VideoCapture(location_videofile)
-    os.mkdir('C:/Projects/FlaskApp/sample/')
+    capture = cv2.VideoCapture(filename)
+    os.mkdir(f'sample_{name}')
+    path=str(os.getcwd())+f'/sample_{name}/'
     frameNr = 0   
     while (True): 
         success, frame = capture.read() 
         if success:
-            cv2.imwrite(f'C:/Projects/FlaskApp/sample/frame_{frameNr}.jpg', frame)
+            # cv2.imwrite(f'C:/Projects/Emotion-detection-audiovideo/FlaskApp/sample_{name}/frame_{frameNr}.jpg', frame)
+            cv2.imwrite(path+f"frame_{frameNr}.jpg", frame)
         else:
             break 
         frameNr = frameNr+1 
@@ -52,7 +56,8 @@ def videoemotion(name):
     data=[]
     while True:
         try:
-            input_image = cv2.imread(f'C:/Projects/FlaskApp/sample/frame_{i}.jpg')
+            # input_image = cv2.imread(f'C:/Projects/Emotion-detection-audiovideo/FlaskApp/sample_{name}/frame_{i}.jpg')
+            input_image = cv2.imread(path+f"frame_{i}.jpg")
             emotion_detector = FER()
             var=emotion_detector.detect_emotions(input_image)
             if(len(var)>0):
@@ -63,13 +68,13 @@ def videoemotion(name):
 
     df = pd.DataFrame(data, columns=['Angry','Disgust','Fear','Happy','Sad','Surprise','Neutral'])
     pltfig = df.plot(title = 'Last meeting Video emotion analysis').get_figure()
-    pltfig.savefig("videooutput.png")
+    pltfig.savefig(f"{name}videooutput.png")
 
-    shutil.rmtree('C:/Projects/FlaskApp/sample/')
-    os.remove(location_videofile)
-    cloudinary.config(cloud_name = 'arkadeep', api_key='814767185331119', 
-    api_secret='Dg6qwXoZT4F6x5G2mhXqksiRdZU')
-    upload_result = cloudinary.uploader.upload('videooutput.png')
+    shutil.rmtree(f'C:/Projects/Emotion-detection-audiovideo/FlaskApp/sample_{name}')
+    # os.remove(filename)
+    cloudinary.config(cloud_name = '', api_key='', 
+    api_secret='')
+    upload_result = cloudinary.uploader.upload(f"{name}videooutput.png")
     angry = sum(df['Angry'])
     disgust = sum(df['Disgust'])
     fear = sum(df['Fear'])
@@ -89,7 +94,7 @@ def videoemotion(name):
         surprise+=user['disgust']
         count+=user['count']
     db.videourl.update_one({'name':name},{'$set': {'angry': angry, 'neutral': neutral, 'happy': happy, 'sad': sad, 'fear': fear, 'disgust': disgust, 'surprise': surprise, 'count': count, 'date': str(date.today()), 'time': str(datetime.now().strftime("%H:%M")), 'url': upload_result['url']}},upsert=True)
-    os.remove("videooutput.png")
+    os.remove(f"{name}videooutput.png")
 
 def extract_features(data,sample_rate):
     # ZCR
@@ -136,22 +141,22 @@ def predict_emotion(path,model):
       break
   return res
 
-def audioemotion(name):
+def audioemotion(filename,name):
    MODEL_PATH = 'speech_emotion_detection.h5'
    model = load_model(MODEL_PATH)
-   location_audiofile = str(Path.home() / "Downloads/RecordedAudio.wav")
-   while not os.path.exists(location_audiofile):
+   # location_audiofile = str(Path.home() / "Downloads/RecordedAudio.wav")
+   while not os.path.exists(filename):
         time.sleep(1)
-   data=predict_emotion(location_audiofile,model)
+   data=predict_emotion(filename,model)
    for l in data:
       del l[1]
    df = pd.DataFrame(data, columns=['Angry','Disgust','Fear','Happy','Neutral','Sad','Surprise'])
    pltfig = df.plot(title = 'Last meeting Audio emotion analysis').get_figure()
-   pltfig.savefig("audiooutput.png")
-   os.remove(location_audiofile)
+   pltfig.savefig(f"{name}audiooutput.png")
+   # os.remove(filename)
    cloudinary.config(cloud_name = '', api_key='', 
    api_secret='')
-   upload_result = cloudinary.uploader.upload('audiooutput.png')
+   upload_result = cloudinary.uploader.upload(f"{name}audiooutput.png")
    angry = sum(df['Angry'])
    disgust = sum(df['Disgust'])
    fear = sum(df['Fear'])
@@ -171,14 +176,34 @@ def audioemotion(name):
       surprise+=user['disgust']
       count+=user['count']
    db.audiourl.update_one({'name':name},{'$set': {'angry': angry, 'neutral': neutral, 'happy': happy, 'sad': sad, 'fear': fear, 'disgust': disgust, 'surprise': surprise, 'count': count, 'date': str(date.today()), 'time': str(datetime.now().strftime("%H:%M")), 'url': upload_result['url']}},upsert=True)
-   os.remove("audiooutput.png")
+   os.remove(f"{name}audiooutput.png")
 
-@app.route('/')
+@app.route('/hello', methods=['GET'])
+def index2():
+    print("Hello")
+    return jsonify(message="success")
+    
+@app.route('/', methods=['POST'])
 def index():
-    args = request.args
-    name=args.get('name')    
-    audioemotion(name)
-    videoemotion(name)
+    # args = request.args
+    # name=args.get('name')   
+    name = request.form.get('name')
+    print(name)
+    file = request.files['video-file']
+    file.save(file.filename)
+    videoemotion(file.filename,name)
+    return jsonify(message="success")
+    # return render_template("index.html")
+
+@app.route('/audio', methods=['POST'])
+def index1():
+    # args = request.args
+    # name=args.get('name') 
+    name = request.form.get('name')  
+    print(name)
+    file = request.files['audio-file']
+    file.save(file.filename)
+    audioemotion(file.filename,name)
     return jsonify(message="success")
     # return render_template("index.html")
 

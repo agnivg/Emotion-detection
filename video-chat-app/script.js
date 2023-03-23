@@ -4,7 +4,7 @@ let client = AgoraRTC.createClient({mode:'rtc', codec:"vp8"})
 //#2
 let config = {
     appid:'687243f4adc34d2f9a899777f37eca90',
-    token:'007eJxTYND0ZXwkMaNwX+fS5I8RN19582gnnXNSSHrNnvBo3lO7GycVGMwszI1MjNNMElOSjU1SjNIsEy0sLc3NzdOMzVOTEy0NvNJZUhoCGRnM37gyMjJAIIjPxpCYnpdZls7AAABsYR98',
+    token:'007eJxTYOjbP0F+rdrcsKNcJxs5K1wMr3t8W/jEJcjQ/uT8iJ/1J+IUGMwszI1MjNNMElOSjU1SjNIsEy0sLc3NzdOMzVOTEy0NruwRSGkIZGR4v/E1AyMUgvhsDInpeZll6QwMAKtcIXc=',
     uid:null,
     channel:'agnivg',
 }
@@ -245,23 +245,29 @@ function processFrame() {
 async function generateRecordingPreview() {
     let mediaBlob = new Blob(mediaChunks, { type: "video/mp4" });
     let mediaBlobUrl = URL.createObjectURL(mediaBlob);
-    // let newFile = new File([mediaBlob], 'RecordedVideo.mp4', {
-    //     type: "video/mp4",
-    // });
-    // const formData = new FormData()
-    // formData.append('video-file', newFile)
-    // const response=fetch('http://localhost:5000/', {
-    //     method: 'POST',
-    //     body: formData
-    // });
     const name=document.getElementById('username').value;
-    let a=document.createElement('a')
-    a.href = mediaBlobUrl
-    a.download = "RecordedVideo.mp4"
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    const res=fetch(`http://localhost:5000?name=${name}`)
+    let newFile = new File([mediaBlob], `${name}_RecordedVideo.mp4`, {
+        type: "video/mp4",
+    });
+    const formData = new FormData()
+    formData.append('video-file', newFile)
+    formData.append('name',name)
+    const maxRequestSize=2 * 1024 * 1024 * 1024
+    fetch('http://localhost:5000/', {
+        method: 'POST',
+        headers: {
+            'Content-Length': maxRequestSize.toString(),
+        },
+        body: formData
+    }).then((response)=>response.json()).then((data)=>console.log(data)).catch((err)=>console.log(err))
+    
+    // let a=document.createElement('a')
+    // a.href = mediaBlobUrl
+    // a.download = "RecordedVideo.mp4"
+    // document.body.appendChild(a)
+    // a.click()
+    // document.body.removeChild(a)
+    // const res=fetch(`http://localhost:5000?name=${name}`)
     myFunction()
 }
 
@@ -322,12 +328,28 @@ function stopCapture() {
 async function generateRecordingPreviewAudio(){
     const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
     const audioUrl = URL.createObjectURL(audioBlob);
-    let a=document.createElement('a')
-    a.href = audioUrl
-    a.download = `RecordedAudio.wav`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+    const name=document.getElementById('username').value;
+    console.log('audio'+name)
+    let newFile = new File([audioBlob], `${name}_RecordedAudio.wav`, {
+        type: "audio/wav",
+    });
+    const formData = new FormData()
+    formData.append('audio-file', newFile)
+    formData.append('name',name)
+    const maxRequestSize=2 * 1024 * 1024 * 1024
+    const response=fetch('http://localhost:5000/audio', {
+        method: 'POST',
+        headers: {
+            'Content-Length': maxRequestSize.toString(),
+        },
+        body: formData
+    });
+    // let a=document.createElement('a')
+    // a.href = audioUrl
+    // a.download = `RecordedAudio.wav`
+    // document.body.appendChild(a)
+    // a.click()
+    // document.body.removeChild(a)
 }
 
 function startCaptureAudio(){
